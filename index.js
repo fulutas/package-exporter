@@ -2,31 +2,46 @@ const fs = require('fs');
 const path = require('path');
 const xlsx = require('xlsx');
 const { v4 } = require('uuid');
-const readline = require('readline');
+const inquirer = require('inquirer');
+const axios = require('axios');
+
+async function getLatestVersion(packageName, projectName) {
+  console.log(`🔍 Fetching latest version for: ${packageName}\n📂 Project Name: ${projectName}`);
+
+  try {
+    const response = await axios.get(`https://registry.npmjs.org/${packageName}`);
+    return response.data['dist-tags'].latest;
+  } catch (error) {
+    console.error(`❌ Error fetching version for ${packageName}:`, error);
+    return 'N/A';
+  }
+}
 
 async function getDirectories() {
+  const prompt = inquirer.createPromptModule();
   const id = v4();
-  process.stdin.resume();
+  const answers = await prompt([
+    {
+      type: 'input',
+      name: 'rootDir',
+      message: 'Enter the root directory:',
+      default: 'C:/Projects/CSM/Frontend/CORE',
+    },
+    {
+      type: 'input',
+      name: 'outputDir',
+      message: 'Enter the output directory:',
+      default: 'C:/Projects/CSM/Frontend/CORE',
+    },
+    {
+      type: 'input',
+      name: 'outputFileName',
+      message: 'Enter the output file name:',
+      default: `react_dev_package_list-${id.toString().substring(0, 10)}.xlsx`,
+    },
+  ]);
 
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout
-  });
-
-  function askQuestion(query, defaultValue) {
-    return new Promise(resolve => {
-      rl.question(`${query} (default: ${defaultValue}): `, answer => {
-        resolve(answer.trim() || defaultValue);
-      });
-    });
-  }
-
-  const rootDir = await askQuestion("Enter the root directory", "C:/Projects/CSM/Frontend/CORE");
-  const outputDir = await askQuestion("Enter the output directory", "C:/Projects/CSM/Frontend/CORE");
-  const outputFileName = await askQuestion("Enter the output file name", `react_dev_package_list-${id.substring(0, 10)}.xlsx`);
-
-  rl.close();
-  return { rootDir, outputDir, outputFileName };
+  return answers;
 }
 
 async function main() {
@@ -50,25 +65,34 @@ async function main() {
     return results;
   }
 
-  function extractReactDependencies(filePath) {
+  async function extractReactDependencies(filePath) {
     console.log(`Scanning JSON content: ${filePath}`);
     const content = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
     const dependencies = { ...content.dependencies, ...content.devDependencies };
 
-    return Object.keys(dependencies).map(key => ({
-      "File Path": filePath,
-      "Name": content.name,
-      "Description": content.description,
-      "Package": key,
-      "Version": dependencies[key]
-    }));
+    const packages = Object.keys(dependencies).map(async (key) => {
+      const latestVersion = await getLatestVersion(key, content.name);
+      return {
+        "File Path": filePath,
+        "Name": content.name || 'N/A',
+        "Description": content.description || 'N/A',
+        "Package": key,
+        "Installed Version": dependencies[key],
+        "Latest Version": latestVersion
+      };
+    });
+
+    return Promise.all(packages);
   }
 
-  // Find package.json files and extract dependencies
+  // Find files and prepare data
   const packageFiles = findPackageJsonFiles(rootDir);
-  const data = packageFiles.flatMap(extractReactDependencies);
+  let data = [];
+  for (const file of packageFiles) {
+    data = data.concat(await extractReactDependencies(file));
+  }
 
-  // Write to Excel
+  // Excel write
   const worksheet = xlsx.utils.json_to_sheet(data);
   const workbook = xlsx.utils.book_new();
   xlsx.utils.book_append_sheet(workbook, worksheet, "React Dependencies");
