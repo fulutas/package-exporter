@@ -8,6 +8,12 @@ A Node.js script for scanning and extracting all dependencies from `package.json
 - Extracts all dependencies and devDependencies from `package.json`.
 - Outputs the collected data into an easily readable Excel file format.
 
+## New Exe Package Export
+
+```bash
+  pkg .
+```
+
 ## Installation
 
 1. Clone the repository:

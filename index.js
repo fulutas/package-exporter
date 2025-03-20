@@ -1,35 +1,32 @@
 const fs = require('fs');
 const path = require('path');
 const xlsx = require('xlsx');
-const { styleText } = require('node:util');
 const { v4 } = require('uuid');
-const inquirer = require('inquirer');
+const readline = require('readline');
 
 async function getDirectories() {
-  const prompt = inquirer.createPromptModule();
   const id = v4();
-  const answers = await prompt([
-    {
-      type: 'input',
-      name: 'rootDir',
-      message: 'Enter the root directory:',
-      default: 'C:/Projects/CSM/Frontend/CORE',
-    },
-    {
-      type: 'input',
-      name: 'outputDir',
-      message: 'Enter the output directory:',
-      default: 'C:/Projects/CSM/Frontend/CORE',
-    },
-    {
-      type: 'input',
-      name: 'outputFileName',
-      message: 'Enter the output file name:',
-      default: `react_dev_package_list-${id.toString().substring(0, 10)}.xlsx`,
-    },
-  ]);
+  process.stdin.resume();
 
-  return answers;
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+  });
+
+  function askQuestion(query, defaultValue) {
+    return new Promise(resolve => {
+      rl.question(`${query} (default: ${defaultValue}): `, answer => {
+        resolve(answer.trim() || defaultValue);
+      });
+    });
+  }
+
+  const rootDir = await askQuestion("Enter the root directory", "C:/Projects/CSM/Frontend/CORE");
+  const outputDir = await askQuestion("Enter the output directory", "C:/Projects/CSM/Frontend/CORE");
+  const outputFileName = await askQuestion("Enter the output file name", `react_dev_package_list-${id.substring(0, 10)}.xlsx`);
+
+  rl.close();
+  return { rootDir, outputDir, outputFileName };
 }
 
 async function main() {
@@ -39,7 +36,7 @@ async function main() {
   function findPackageJsonFiles(dir) {
     let results = [];
     const list = fs.readdirSync(dir);
-    console.log(styleText('blue', `File scanning in progress...: ${dir}`));
+    console.log(`Scanning directory: ${dir}`);
 
     list.forEach(file => {
       const filePath = path.join(dir, file);
@@ -54,33 +51,30 @@ async function main() {
   }
 
   function extractReactDependencies(filePath) {
-    console.log(styleText('yellowBright', `Scanning JSON content...: ${filePath}`));
-
+    console.log(`Scanning JSON content: ${filePath}`);
     const content = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
     const dependencies = { ...content.dependencies, ...content.devDependencies };
 
-    return Object.keys(dependencies)
-      // .filter(key => key === "react" || key === "react-dom")
-      .map(key => ({
-        "File Path": filePath,
-        "Name": content.name,
-        "Description": content.description,
-        "Package": key,
-        "Version": dependencies[key]
-      }));
+    return Object.keys(dependencies).map(key => ({
+      "File Path": filePath,
+      "Name": content.name,
+      "Description": content.description,
+      "Package": key,
+      "Version": dependencies[key]
+    }));
   }
 
-  // Find files and prepare data
+  // Find package.json files and extract dependencies
   const packageFiles = findPackageJsonFiles(rootDir);
   const data = packageFiles.flatMap(extractReactDependencies);
 
-  // Excel write
+  // Write to Excel
   const worksheet = xlsx.utils.json_to_sheet(data);
   const workbook = xlsx.utils.book_new();
   xlsx.utils.book_append_sheet(workbook, worksheet, "React Dependencies");
   xlsx.writeFile(workbook, outputFile);
 
-  console.log(styleText('green', `✅ Excel file created: ${outputFile}`));
+  console.log(`✅ Excel file created: ${outputFile}`);
 }
 
 main();
