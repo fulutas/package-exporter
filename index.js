@@ -6,7 +6,7 @@ const inquirer = require('inquirer');
 const axios = require('axios');
 
 async function getLatestVersion(packageName, projectName) {
-  console.log(`🔍 Fetching latest version for: ${packageName}\n📂 Project Name: ${projectName}`);
+  console.log(`🔍 Fetching latest version package for: ${packageName}\n📂 Project Name: ${projectName}`);
 
   try {
     const response = await axios.get(`https://registry.npmjs.org/${packageName}`);
@@ -70,19 +70,27 @@ async function main() {
     const content = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
     const dependencies = { ...content.dependencies, ...content.devDependencies };
 
-    const packages = Object.keys(dependencies).map(async (key) => {
-      const latestVersion = await getLatestVersion(key, content.name);
-      return {
-        "File Path": filePath,
-        "Name": content.name || 'N/A',
-        "Description": content.description || 'N/A',
-        "Package": key,
-        "Installed Version": dependencies[key],
-        "Latest Version": latestVersion
-      };
-    });
+    const results = await Promise.all(
+      Object.keys(dependencies).map(async key => {
+        const installedVersion = dependencies[key];
+        const cleanedVersion = installedVersion.replace(/^[\^~]/, "");
 
-    return Promise.all(packages);
+        const latestVersion = await getLatestVersion(key, content.name);
+        const versionDifference = cleanedVersion === latestVersion ? "🟢 Up to date" : "🔴 Update available";
+
+        return {
+          "File Path": filePath,
+          "Project Name": content.name,
+          "Description": content.description || "",
+          "Package": key,
+          "Installed Version": installedVersion,
+          "Latest Version": latestVersion,
+          "Version Difference": versionDifference
+        };
+      })
+    );
+
+    return results;
   }
 
   // Find files and prepare data
