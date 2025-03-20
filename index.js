@@ -85,7 +85,8 @@ async function main() {
           "Package": key,
           "Installed Version": installedVersion,
           "Latest Version": latestVersion,
-          "Version Difference": versionDifference
+          "Version Difference": versionDifference,
+          "NPM Link": `https://www.npmjs.com/package/${key}`,
         };
       })
     );
