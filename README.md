@@ -1,4 +1,4 @@
-# Package Dependencies Exporter
+# Package Dependencies Analysis and Package Update
 
 ## Overview
 
@@ -8,6 +8,7 @@ Package Dependencies Exporter is a Node.js tool that scans directories to find `
 
 - **Recursive Scanning**: Automatically detects `package.json` files in subdirectories (excluding `node_modules`).
 - **Dependency Extraction**: Collects all dependencies and their versions from each project.
+- **Version Update**: The `updatePackages` function analyzes current versions, compares them with the latest npm registry versions, and updates outdated dependencies within the node_modules folder.
 - **Latest Version Check**: Fetches the latest version of each package from the npm registry.
 - **Excel Export**: Generates a structured Excel file containing all dependency details.
 - **Standalone Executable**: Can be packaged into an `.exe` file for easier usage without requiring Node.js installation.
@@ -30,17 +31,16 @@ Package Dependencies Exporter is a Node.js tool that scans directories to find `
 ### 3. Run the Script
 
 ```bash
-  node index.js
+  start-update or start-report
 ```
-
-Follow the prompts to specify the root directory and output location.
 
 ## Generating Executable Package
 
 To create a standalone executable, use:
 
 ```bash
-  pkg .
+  pkg ./bin/updatePackages.js --targets node16-win-x64 --output ./dist/updatePackages.exe
+  pkg ./bin/reportPackages.js --targets node16-win-x64 --output ./dist/reportPackages.exe
 ```
 
 This will generate an executable file, allowing the script to run without requiring Node.js.

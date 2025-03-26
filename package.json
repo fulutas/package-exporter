@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start-report": "node bin/reportPackages.js",
+    "start-update": "node bin/updatePackages.js"
   },
   "keywords": [],
   "author": "",
@@ -16,10 +17,14 @@
     "uuid": "^11.1.0",
     "xlsx": "^0.18.5"
   },
-  "bin": "index.js",
+  "bin": {
+    "reportPackages": "./bin/reportPackages.js",
+    "updatePackages": "./bin/updatePackages.js"
+  },
   "pkg": {
     "scripts": [
-      "index.js"
+      "bin/reportPackages.js",  
+      "bin/updatePackages.js"  
     ],
     "targets": [
       "node16-win-x64"
